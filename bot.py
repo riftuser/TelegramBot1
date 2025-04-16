@@ -1,13 +1,13 @@
 import os
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
-import asyncio
 
 ADMIN_ID = 7631211375
 CREATOR_ID = 8066177203
 BOT_TOKEN = "7239607925:AAGYq1zt1NOw4vW3VnDa5SSJIQiifvimeBk"
 
-# Database with simple category names (no emojis)
+# Database with simple keys (no emojis)
 database = {
     "nltopics": {},
     "languages": {},
@@ -28,29 +28,29 @@ def create_menu():
          InlineKeyboardButton("🇯🇵 Anime", callback_data="anime")],
         [InlineKeyboardButton("💾 Megas", callback_data="megas"), 
          InlineKeyboardButton("🔴 Lives", callback_data="lives")],
-        [InlineKeyboardButton("❓ How To Open Links", callback_data="howto", size=2)],  # Wider button
-        [InlineKeyboardButton("📩 Contact Support", callback_data="contact", size=2)],  # Wider button
-        [InlineKeyboardButton("📢 Share Bot", url="https://t.me/share/url?url=https://t.me/The0LinkerBot", size=2)]  # Wider button
+        [InlineKeyboardButton("❓ How To Open Links", callback_data="howto", size=2)],
+        [InlineKeyboardButton("📩 Contact Support", callback_data="contact", size=2)],
+        [InlineKeyboardButton("📢 Share Bot", url="https://t.me/share/url?url=https://t.me/The0LinkerBot", size=2)]
     ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    reply_markup = InlineKeyboardMarkup(create_menu())
+    keyboard = InlineKeyboardMarkup(create_menu())
     if update.message:
         await update.message.reply_text(
             "🔹 Choose an option:",
-            reply_markup=reply_markup
+            reply_markup=keyboard
         )
     else:
         query = update.callback_query
         await query.answer()
         await query.edit_message_text(
-            "🔹 Choose an option:",
-            reply_markup=reply_markup
+            text="🔹 Choose an option:",
+            reply_markup=keyboard
         )
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("⚡ Loading...")  # Animation effect
+    await query.answer("⚡")  # Simple animation
     
     if query.data == "howto":
         tutorial = """🔐 Access Guide:
@@ -60,24 +60,24 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 4. Wait 30 seconds"""
         await query.edit_message_text(
             text=tutorial,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back", size=2)]])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
         )
     elif query.data == "contact":
         contact_msg = """✉️ Support Ticket\n\nDescribe your issue.\nWe'll respond within 24h.\n\n/cancel to abort"""
         contact_mode_users.add(query.from_user.id)
         await query.edit_message_text(
             text=contact_msg,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back", size=2)]])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
         )
     elif query.data in database:
         links = database[query.data]
         if links:
             await query.edit_message_text(
                 text=f"📤 Sending {len(links)} links...",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back", size=2)]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
             )
             for num, text in links.items():
-                await asyncio.sleep(0.5)  # Small delay between messages
+                await asyncio.sleep(0.3)  # Small delay between messages
                 await context.bot.send_message(
                     chat_id=query.message.chat_id,
                     text=text,
@@ -86,7 +86,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.edit_message_text(
                 text=f"❌ No links available",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back", size=2)]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
             )
     elif query.data == "back":
         await start(update, context)
@@ -125,12 +125,12 @@ async def add_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if len(context.args) < 2:
-        await update.message.reply_text("Usage: /add category message")
+        await update.message.reply_text("Usage: /add category_key message")
+        await update.message.reply_text("Available keys: nl, la, fe, an, me, li, ho")
         return
     
-    # Match first 2 letters of category (case insensitive)
-    input_cat = context.args[0].lower()[:2]
-    categories = {
+    # Category mapping
+    cat_map = {
         "nl": "nltopics",
         "la": "languages",
         "fe": "fetishes",
@@ -140,11 +140,12 @@ async def add_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "ho": "howto"
     }
     
-    category = categories.get(input_cat)
-    if not category:
-        await update.message.reply_text("❌ Invalid category. Use first 2 letters (nl/la/fe/an/me/li/ho)")
+    cat_key = context.args[0].lower()
+    if cat_key not in cat_map:
+        await update.message.reply_text("❌ Invalid key. Use: nl, la, fe, an, me, li, ho")
         return
     
+    category = cat_map[cat_key]
     message = " ".join(context.args[1:])
     link_number = len(database[category]) + 1
     database[category][link_number] = message
@@ -161,6 +162,7 @@ def main():
     app.add_handler(CallbackQueryHandler(button_click))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_message))
     
+    print("🤖 Bot is running and ready!")
     app.run_polling()
 
 if __name__ == "__main__":
