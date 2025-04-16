@@ -1,152 +1,134 @@
-import os
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# CONFIG (USE YOUR EXACT DETAILS)
-ADMIN_ID = 7631211375  # Your admin ID
-CREATOR_ID = 8066177203  # Your creator ID
-BOT_TOKEN = "7239607925:AAGYq1zt1NOw4vW3VnDa5SSJIQiifvimeBk"  # YOUR EXACT TOKEN
+# CONFIG (YOUR DETAILS)
+BOT_TOKEN = "7239607925:AAGYq1zt1NOw4vW3VnDa5SSJIQiifvimeBk"  # YOUR TOKEN
+ADMIN_ID = 7631211375  # YOUR ADMIN ID
+CREATOR_ID = 8066177203  # YOUR CREATOR ID
 
-# Database
+# Database with sample links
 database = {
-    "nltopics": {},
-    "languages": {},
-    "fetishes": {},
-    "anime": {},
-    "megas": {},
-    "lives": {},
-    "howto": {}
+    "nltopics": {
+        1: "https://example.com/nl1",
+        2: "https://example.com/nl2"
+    },
+    "languages": {
+        1: "https://example.com/lang1",
+        2: "https://example.com/lang2"
+    },
+    "fetishes": {
+        1: "https://example.com/fetish1"
+    },
+    "megas": {
+        1: "https://example.com/mega1"
+    },
+    "howto": {
+        1: "• HOW TO OPEN LINKS •\n\n1. Click 'Watch Video'\n2. Wait 30 sec\n3. Links will unlock"
+    }
 }
 
-contact_mode_users = set()
-
 def create_menu():
+    """Create 2x2 menu with single bottom button"""
     return [
-        [InlineKeyboardButton("📚 NL Topics", callback_data="nltopics"), 
-         InlineKeyboardButton("🌐 Languages", callback_data="languages")],
-        [InlineKeyboardButton("🎭 Fetishes", callback_data="fetishes"), 
-         InlineKeyboardButton("🇯🇵 Anime", callback_data="anime")],
-        [InlineKeyboardButton("💾 Megas", callback_data="megas"), 
-         InlineKeyboardButton("🔴 Lives", callback_data="lives")],
-        [InlineKeyboardButton("❓ How To Open Links", callback_data="howto")],
-        [InlineKeyboardButton("📩 Contact Support", callback_data="contact")],
-        [InlineKeyboardButton("📢 Share Bot", url="https://t.me/share/url?url=https://t.me/The0LinkerBot")]
+        # First row - 2 buttons
+        [InlineKeyboardButton("NL TOPICS", callback_data="nltopics"), 
+         InlineKeyboardButton("LANGUAGES", callback_data="languages")],
+        
+        # Second row - 2 buttons
+        [InlineKeyboardButton("FETISHES", callback_data="fetishes"), 
+         InlineKeyboardButton("MEGAS", callback_data="megas")],
+        
+        # Third row - 1 button (centered)
+        [InlineKeyboardButton("HOW TO OPEN", callback_data="howto")],
+        
+        # Fourth row - 1 button (contact only)
+        [InlineKeyboardButton("CONTACT SUPPORT", callback_data="contact")],
+        
+        # Fifth row - 1 button (help us with share)
+        [InlineKeyboardButton("HELP US (SHARE)", url="https://t.me/share/url?url=https://t.me/The0LinkerBot")]
     ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /start command"""
     keyboard = InlineKeyboardMarkup(create_menu())
     if update.message:
-        await update.message.reply_text("🔹 Choose an option:", reply_markup=keyboard)
+        await update.message.reply_text(
+            "🔻 SELECT CATEGORY 🔻",
+            reply_markup=keyboard
+        )
     else:
         query = update.callback_query
         await query.answer()
-        await query.edit_message_text("🔹 Choose an option:", reply_markup=keyboard)
+        await query.edit_message_text(
+            text="🔻 SELECT CATEGORY 🔻",
+            reply_markup=keyboard
+        )
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button presses"""
     query = update.callback_query
-    await query.answer("⚡")
+    await query.answer("⚡")  # Button click animation
     
     if query.data == "howto":
-        tutorial = """🔐 Access Guide:
-1. Select 'View Content'
-2. Let it load completely
-3. Return to previous screen
-4. Wait 30 seconds"""
-        await query.edit_message_text(tutorial, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]]))
+        guide = database["howto"][1]
+        await query.edit_message_text(
+            text=guide,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK", callback_data="back")]])
+        )
     elif query.data == "contact":
-        contact_msg = """✉️ Support Ticket\n\nDescribe your issue.\nWe'll respond within 24h.\n\n/cancel to abort"""
-        contact_mode_users.add(query.from_user.id)
-        await query.edit_message_text(contact_msg, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]]))
+        await query.edit_message_text(
+            text="📩 Contact our team at @YourSupport\n\nSend /cancel to exit",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK", callback_data="back")]])
+        )
     elif query.data in database:
         links = database[query.data]
-        if links:
-            await query.edit_message_text(f"📤 Sending {len(links)} links...", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]]))
-            for num, text in links.items():
-                await asyncio.sleep(0.3)
-                await context.bot.send_message(chat_id=query.message.chat_id, text=text, parse_mode="Markdown")
-        else:
-            await query.edit_message_text(f"❌ No links available", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]]))
+        # Delete category message first
+        await query.delete_message()
+        # Send links one by one
+        for num, link in links.items():
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=link
+            )
+            await asyncio.sleep(0.5)  # Delay between messages
     elif query.data == "back":
         await start(update, context)
 
-async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id in contact_mode_users:
-        if update.message.text.lower() == "/cancel":
-            contact_mode_users.remove(update.message.from_user.id)
-            await update.message.reply_text("❌ Ticket canceled")
-            return
-            
-        user = update.message.from_user
-        message = f"📩 New Ticket:\nFrom: @{user.username}\nID: {user.id}\n\n{update.message.text}"
-        await context.bot.send_message(chat_id=CREATOR_ID, text=message)
-        contact_mode_users.remove(update.message.from_user.id)
-        await update.message.reply_text("✅ Ticket submitted!")
-
-async def send_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def add_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to add links"""
     if update.message.from_user.id not in [ADMIN_ID, CREATOR_ID]:
         return
     
     if len(context.args) < 2:
-        await update.message.reply_text("Usage: /send userid message")
+        await update.message.reply_text("Usage: /add CATEGORY LINK")
         return
     
-    try:
-        user_id = int(context.args[0])
-        message = " ".join(context.args[1:])
-        await context.bot.send_message(chat_id=user_id, text=message)
-        await update.message.reply_text("✅ Message sent!")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error: {str(e)}")
-
-async def add_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in [ADMIN_ID, CREATOR_ID]:
+    category = context.args[0].lower()
+    if category not in database:
+        await update.message.reply_text("Invalid category! Use: nltopics, languages, fetishes, megas")
         return
     
-    if len(context.args) < 2:
-        await update.message.reply_text("Usage: /add category_key message\nKeys: nl, la, fe, an, me, li, ho")
-        return
+    link = " ".join(context.args[1:])
+    new_id = max(database[category].keys(), default=0) + 1
+    database[category][new_id] = link
     
-    cat_map = {
-        "nl": "nltopics",
-        "la": "languages",
-        "fe": "fetishes",
-        "an": "anime",
-        "me": "megas",
-        "li": "lives",
-        "ho": "howto"
-    }
-    
-    cat_key = context.args[0].lower()
-    if cat_key not in cat_map:
-        await update.message.reply_text("❌ Invalid key. Use: nl, la, fe, an, me, li, ho")
-        return
-    
-    category = cat_map[cat_key]
-    message = " ".join(context.args[1:])
-    link_number = len(database[category]) + 1
-    database[category][link_number] = message
-    
-    await update.message.reply_text(f"✅ Added to {category} as link #{link_number}")
+    await update.message.reply_text(f"✅ Added to {category.upper()} as link #{new_id}")
 
 def main():
-    print("🔥 STARTING BOT WITH YOUR TOKEN 🔥")
-    print(f"Token: {BOT_TOKEN[:5]}...{BOT_TOKEN[-5:]}")
+    """Start the bot"""
+    print("🟢 BOT STARTED - PRESS CTRL+C TO STOP")
+    app = Application.builder().token(BOT_TOKEN).build()
     
-    try:
-        app = Application.builder().token(BOT_TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("cancel", lambda u,c: contact_mode_users.discard(u.message.from_user.id)))
-        app.add_handler(CommandHandler("send", send_to_user))
-        app.add_handler(CommandHandler("add", add_category))
-        app.add_handler(CallbackQueryHandler(button_click))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_message))
-        
-        print("✅ BOT IS RUNNING! Send /start to test")
-        app.run_polling()
-    except Exception as e:
-        print(f"❌ FAILED: {str(e)}")
-        print("CHECK YOUR TOKEN OR SERVER CONNECTION")
+    # Add command handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("add", add_link))
+    
+    # Add button handler
+    app.add_handler(CallbackQueryHandler(button_click))
+    
+    # Start polling
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
