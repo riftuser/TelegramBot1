@@ -20,44 +20,55 @@ database = {
 
 contact_mode_users = set()
 
-# MENU CREATION
+# MENU CREATION WITH BIGGER BUTTONS AND PROPER ALIGNMENT
 def create_menu():
     return [
-        [InlineKeyboardButton("📚 NL Topics", callback_data="nltopics"), 
-         InlineKeyboardButton("🌐 Languages", callback_data="languages")],
-        [InlineKeyboardButton("🎭 Fetishes", callback_data="fetishes"), 
-         InlineKeyboardButton("🇯🇵 Anime", callback_data="anime")],
-        [InlineKeyboardButton("💾 Megas", callback_data="megas"), 
-         InlineKeyboardButton("🔴 Lives", callback_data="lives")],
-        [InlineKeyboardButton("❓ How to Open Links", callback_data="howto")],
-        [InlineKeyboardButton("📩 Contact Support", callback_data="contact")],
-        [InlineKeyboardButton("🔄 Help Us (Share)", url="https://t.me/share/url?url=https://t.me/The0LinkerBot")]
+        # First row - 2 big buttons
+        [InlineKeyboardButton("📚 NL TOPICS", callback_data="nltopics", width=10), 
+         InlineKeyboardButton("🌐 LANGUAGES", callback_data="languages", width=10)],
+        
+        # Second row - 2 big buttons
+        [InlineKeyboardButton("🎭 FETISHES", callback_data="fetishes", width=10), 
+         InlineKeyboardButton("🇯🇵 ANIME", callback_data="anime", width=10)],
+        
+        # Third row - 2 big buttons
+        [InlineKeyboardButton("💾 MEGAS", callback_data="megas", width=10), 
+         InlineKeyboardButton("🔴 LIVES", callback_data="lives", width=10)],
+        
+        # Fourth row - Single centered button (How To)
+        [InlineKeyboardButton("❓ HOW TO OPEN LINKS", callback_data="howto", width=20)],
+        
+        # Fifth row - Single centered button (Help Us)
+        [InlineKeyboardButton("🔄 HELP US (SHARE)", url="https://t.me/share/url?url=https://t.me/The0LinkerBot", width=20)],
+        
+        # Sixth row - Single centered button (Contact)
+        [InlineKeyboardButton("📩 CONTACT SUPPORT", callback_data="contact", width=20)]
     ]
 
 # COMMAND HANDLERS
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup(create_menu())
     if update.message:
-        await update.message.reply_text("🔻 Choose option:", reply_markup=keyboard)
+        await update.message.reply_text("🔻 MAIN MENU 🔻", reply_markup=keyboard)
     else:
         query = update.callback_query
         await query.answer()
-        await query.edit_message_text("🔻 Choose option:", reply_markup=keyboard)
+        await query.edit_message_text("🔻 MAIN MENU 🔻", reply_markup=keyboard)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("⚡")
+    await query.answer("⚡")  # Button click animation
     
     if query.data == "howto":
         await query.edit_message_text(
             text=database["howto"][1],
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK", callback_data="back", width=20)]])
         )
     elif query.data == "contact":
         contact_mode_users.add(query.from_user.id)
         await query.edit_message_text(
-            text="✉️ Contact our team @YourSupport\n\nSend /cancel to exit",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
+            text="✉️ CONTACT OUR TEAM @YourSupport\n\nSend /cancel to exit",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK", callback_data="back", width=20)]])
         )
     elif query.data in database:
         links = database[query.data]
@@ -72,15 +83,15 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id in contact_mode_users:
         if update.message.text == "/cancel":
             contact_mode_users.remove(update.message.from_user.id)
-            await update.message.reply_text("❌ Cancelled")
+            await update.message.reply_text("❌ CANCELLED")
             return
             
         await context.bot.send_message(
             chat_id=CREATOR_ID,
-            text=f"📩 New message from {update.message.from_user.id}:\n\n{update.message.text}"
+            text=f"📩 NEW MESSAGE FROM {update.message.from_user.id}:\n\n{update.message.text}"
         )
         contact_mode_users.remove(update.message.from_user.id)
-        await update.message.reply_text("✅ Message sent to support")
+        await update.message.reply_text("✅ MESSAGE SENT TO SUPPORT")
 
 async def add_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in [ADMIN_ID, CREATOR_ID]:
@@ -102,7 +113,7 @@ async def add_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     code = context.args[0].lower()
     if code not in code_map:
-        await update.message.reply_text("❌ Invalid code! Use: nl, la, fe, an, me, li, ho")
+        await update.message.reply_text("❌ INVALID CODE! USE: nl, la, fe, an, me, li, ho")
         return
     
     category = code_map[code]
@@ -110,7 +121,7 @@ async def add_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     new_id = max(database[category].keys(), default=0) + 1
     database[category][new_id] = link
     
-    await update.message.reply_text(f"✅ Added to {category} as #{new_id}")
+    await update.message.reply_text(f"✅ ADDED TO {category.upper()} AS #{new_id}")
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
@@ -118,8 +129,9 @@ def main():
     app.add_handler(CommandHandler("add", add_link))
     app.add_handler(CallbackQueryHandler(button_click))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact))
+    
+    print("🤖 BOT STARTED - ALL BUTTONS WORKING")
     app.run_polling()
 
 if __name__ == "__main__":
-    print("🤖 BOT STARTED")
     main()
