@@ -6,7 +6,6 @@ ADMIN_ID = 7631211375
 CREATOR_ID = 8066177203
 BOT_TOKEN = "7239607925:AAGYq1zt1NOw4vW3VnDa5SSJIQiifvimeBk"
 
-# Simplified database structure
 database = {
     "NL Topics": {},
     "Languages": {},
@@ -21,15 +20,15 @@ contact_mode_users = set()
 
 def create_menu():
     return [
-        [InlineKeyboardButton("📚 NL Topics", callback_data="NL Topics")],
-        [InlineKeyboardButton("🌐 Languages", callback_data="Languages")],
-        [InlineKeyboardButton("🎭 Fetishes", callback_data="Fetishes")],
-        [InlineKeyboardButton("🇯🇵 Anime", callback_data="Anime")],
-        [InlineKeyboardButton("💾 Megas", callback_data="Megas")],
-        [InlineKeyboardButton("🔴 Lives", callback_data="Lives")],
+        [InlineKeyboardButton("📚 NL Topics", callback_data="NL Topics"), 
+         InlineKeyboardButton("🌐 Languages", callback_data="Languages")],
+        [InlineKeyboardButton("🎭 Fetishes", callback_data="Fetishes"), 
+         InlineKeyboardButton("🇯🇵 Anime", callback_data="Anime")],
+        [InlineKeyboardButton("💾 Megas", callback_data="Megas"), 
+         InlineKeyboardButton("🔴 Lives", callback_data="Lives")],
         [InlineKeyboardButton("❓ How to Open Links", callback_data="How to Open Links")],
-        [InlineKeyboardButton("📢 Share Bot", url="https://t.me/share/url?url=https://t.me/The0LinkerBot")],
-        [InlineKeyboardButton("📩 Contact Support", callback_data="Contact")]
+        [InlineKeyboardButton("📩 Contact Support", callback_data="Contact")],
+        [InlineKeyboardButton("📢 Share Bot", url="https://t.me/share/url?url=https://t.me/The0LinkerBot")]
     ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -52,25 +51,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "How to Open Links":
         tutorial = """🔐 Access Guide:
-
 1. Select 'View Content' option
 2. Let the preview load completely
 3. Return to previous screen
-4. Wait 30 seconds for verification
-5. Access will be granted automatically
-
-🔒 Recommended: Use privacy protection tools"""
+4. Wait 30 seconds for verification"""
         await query.edit_message_text(
             text=tutorial,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
         )
     elif query.data == "Contact":
-        contact_msg = """✉️ Support Ticket
-
-Please describe your issue in detail.
-We'll respond within 24 hours.
-
-Type /cancel to abort"""
+        contact_msg = """✉️ Support Ticket\n\nDescribe your issue in detail.\nWe'll respond within 24 hours.\n\nType /cancel to abort"""
         contact_mode_users.add(query.from_user.id)
         await query.edit_message_text(
             text=contact_msg,
@@ -78,23 +68,16 @@ Type /cancel to abort"""
         )
     elif query.data in database:
         links = database[query.data]
-        if links:
-            # Send links one by one
-            for num, text in links.items():
-                await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text=text,
-                    parse_mode="Markdown"
-                )
-            await query.edit_message_text(
-                text=f"🔗 Sent {len(links)} {query.data} links",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
+        for num, text in links.items():
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=text,
+                parse_mode="Markdown"
             )
-        else:
-            await query.edit_message_text(
-                text=f"❌ No {query.data} links available",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
-            )
+        await query.edit_message_text(
+            text=f"🔗 Sent {len(links)} {query.data} links",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back")]])
+        )
     elif query.data == "back":
         await start(update, context)
 
@@ -102,12 +85,11 @@ async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_T
     if update.message.from_user.id in contact_mode_users:
         if update.message.text == "/cancel":
             contact_mode_users.remove(update.message.from_user.id)
-            await update.message.reply_text("❌ Ticket canceled", reply_markup=InlineKeyboardMarkup(create_menu()))
+            await update.message.reply_text("❌ Ticket canceled")
             return
             
         user = update.message.from_user
-        message = f"📩 New Support Ticket:\n\nFrom: @{user.username}\nID: {user.id}\n\nMessage:\n{update.message.text}"
-        
+        message = f"📩 New Ticket:\nFrom: @{user.username}\nID: {user.id}\n\n{update.message.text}"
         await context.bot.send_message(chat_id=CREATOR_ID, text=message)
         contact_mode_users.remove(update.message.from_user.id)
         await update.message.reply_text("✅ Ticket submitted!")
